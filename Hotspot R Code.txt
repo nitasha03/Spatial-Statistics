@@ -1,0 +1,185 @@
+library(fields)
+library(sp)
+library(maptools)
+library(Imap)
+library(sqldf)
+library(gstat)
+library(plyr)
+library(maps)
+library(autoimage)
+library(ggplot2)
+library(lattice)
+library(ggpubr)
+library(maps)
+library(readr)
+library(ggmap)
+library(splancs)
+
+setwd("C:\\Users\\nitas\\Desktop\\Books\\Statistical Models for spatial data\\Data")
+
+# Reading Accidents data
+zip_codes_states <- read_csv("C:/Users/nitas/Desktop/Books/Statistical Models for spatial data/Data/zip_codes_states.csv")
+Acc_fin<-read.csv("NYPD_Motor_Vehicle_Collisions.csv",header=TRUE,sep=",")
+Acc<-subset(Acc_fin,NUMBER.OF.PERSONS.INJURED >= 0 | NUMBER.OF.PERSONS.KILLED >= 0)              #Reading data of injured and killed people during collision
+Acc$year <- substr(Acc$DATE,7,12)
+Acc$month <- substr(Acc$DATE,1,2)
+Acc$day <- substr(Acc$DATE,4,5)
+Acc$ndate <- as.Date(with(Acc, paste(Acc$year, Acc$month, Acc$day,sep="-")), "%Y-%m-%d")
+Acc$day <- weekdays(as.Date(Acc$ndate))
+Acc$ti <- substr(Acc$TIME,1,5)                                                                               #converting time into character
+Acc$hour <- substr(Acc$TIME,1,nchar(Acc$ti) - 3)
+Acc$min <- substr(Acc$TIME,nchar(Acc$ti) - 1,nchar(Acc$ti))
+Acc$nmon<- months(as.Date(Acc$ndate))
+Acc1<-na.omit(Acc,cols='LATITUDE')                                                          #Omit where latitude and longitude is missing
+Acc2 <- subset(Acc1, ndate > "2013-01-01" & ndate < "2016-12-31")                            #removing 2017 data 
+#colnames(zipcode)[2]<-"LATITUDE"
+#colnames(zipcode)[3]<-"LONGITUDE"
+tot<-merge(Acc2,zip_codes_states,by.x=c("ZIP.CODE"), 
+           by.y=c("zip_code"),all.X=TRUE)
+tot_fin<-subset(tot,city == "New York")
+count(tot_fin,"city")
+
+##############Ploting heatmaps ##############################################
+#############################################################################
+
+No.of.acc<- count(tot_fin,c("year","day","hour"))
+No.of.acc$hour[No.of.acc$hour==0]<- 24
+
+
+#ploting monthly data
+
+no_1 <- subset(No.of.acc,year=="2013")
+str(no_1)
+no_1$hour <- as.numeric(as.character(no_1$hour))
+no_1$day <- factor(no_1$day, ordered = T, levels = c("Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday","Sunday"))
+p1=ggplot(no_1, aes(x = day, y = hour)) + geom_tile(aes(fill = freq))+
+  scale_fill_gradient(name = "Collisions In 2013", low = "white", high = "red") + theme(axis.title.y = element_blank())
+# legend title
+p1 + theme(legend.title = element_text(size=8))
+# legend labels
+p1 + theme(legend.text = element_text(size=5))
+
+no_1 <- subset(No.of.acc,year=="2014")
+str(no_1)
+no_1$hour <- as.numeric(as.character(no_1$hour))
+no_1$day <- factor(no_1$day, ordered = T, levels = c("Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday","Sunday"))
+p2=ggplot(no_1, aes(x = day, y = hour)) + geom_tile(aes(fill = freq))+
+  scale_fill_gradient(name = "Collisions In 2014", low = "white", high = "red") + theme(axis.title.y = element_blank())
+# legend title
+p2 + theme(legend.title = element_text(size=8))
+# legend labels
+p2 + theme(legend.text = element_text(size=5))
+
+no_1 <- subset(No.of.acc,year=="2015")
+str(no_1)
+no_1$hour <- as.numeric(as.character(no_1$hour))
+no_1$day <- factor(no_1$day, ordered = T, levels = c("Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday","Sunday"))
+p3=ggplot(no_1, aes(x = day, y = hour)) + geom_tile(aes(fill = freq))+
+  scale_fill_gradient(name = "Collisions In 2014", low = "white", high = "red") + theme(axis.title.y = element_blank())
+# legend title
+p3 + theme(legend.title = element_text(size=8))
+# legend labels
+p3 + theme(legend.text = element_text(size=5))
+
+no_1 <- subset(No.of.acc,year=="2016")
+str(no_1)
+no_1$hour <- as.numeric(as.character(no_1$hour))
+no_1$day <- factor(no_1$day, ordered = T, levels = c("Monday", "Tuesday", "Wednesday", "Thursday","Friday", "Saturday","Sunday"))
+p4=ggplot(no_1, aes(x = day, y = hour)) + geom_tile(aes(fill = freq))+
+  scale_fill_gradient(name = "Collisions In 2014", low = "white", high = "red") + theme(axis.title.y = element_blank())
+# legend title
+p4 + theme(legend.title = element_text(size=8))
+# legend labels
+p4 + theme(legend.text = element_text(size=5))
+
+ggarrange(p1, p2, p3, p4,  ncol = 1, nrow = 4)
+
+##############################################################################
+#############Ploting maps using google plot or gmaps##########################
+##############################################################################
+
+fin_1 <-subset(tot_fin,NUMBER.OF.PERSONS.INJURED >= 4 | NUMBER.OF.PERSONS.KILLED > 0)
+
+no_1 <- subset(fin_1,year=="2013")
+nyc <- get_map(location = "New York City", zoom = 11)
+ggmap(nyc)
+p1<- ggmap(nyc) + geom_point(data = no_1, aes(x = LONGITUDE, y = LATITUDE), size = 2, color = "Dark Green") +
+  scale_x_continuous(limits = c(-74.015, -73.92696), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.70, 40.86319), expand = c(0, 0))
+
+no_1 <- subset(fin_1,year=="2014")
+nyc <- get_map(location = "New York City", zoom = 11)
+ggmap(nyc)
+p2<- ggmap(nyc) + geom_point(data = no_1, aes(x = LONGITUDE, y = LATITUDE), size = 2, color = "Dark Green") +
+  scale_x_continuous(limits = c(-74.015, -73.92696), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.70, 40.86319), expand = c(0, 0))
+
+no_1 <- subset(fin_1,year=="2014")
+nyc <- get_map(location = "New York City", zoom = 11)
+ggmap(nyc)
+p3<- ggmap(nyc) + geom_point(data = no_1, aes(x = LONGITUDE, y = LATITUDE), size = 2, color = "Dark Green") +
+  scale_x_continuous(limits = c(-74.015, -73.92696), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.70, 40.86319), expand = c(0, 0))
+
+no_1 <- subset(fin_1,year=="2014")
+nyc <- get_map(location = "New York City", zoom = 11)
+ggmap(nyc)
+p4<- ggmap(nyc) + geom_point(data = no_1, aes(x = LONGITUDE, y = LATITUDE), size = 2, color = "Dark Green") +
+  scale_x_continuous(limits = c(-74.015, -73.92696), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(40.70, 40.86319), expand = c(0, 0))
+
+ggarrange(p1, p2, p3, p4,  ncol = 2, nrow = 2)
+
+##################Ploting Kernel Function######################################
+###########An accident is fatal if we include #################################
+########all the people who got killed and injured>4############################
+
+fin_1 <-subset(tot_fin,NUMBER.OF.PERSONS.INJURED >= 4 | NUMBER.OF.PERSONS.KILLED > 0)
+count(fin_1,"year")
+fin_2 <- subset(fin_1,select= c(LATITUDE,LONGITUDE,year),year==2016) 
+count(fin_2,"year")
+sp_point <- matrix(NA, nrow=nrow(fin_2),ncol=2)
+sp_point[,1] <- fin_2$LONGITUDE
+sp_point[,2] <- fin_2$LATITUDE
+colnames(sp_point) <- c("LONG","LAT")
+
+poly <- as.points(c(min(sp_point[,1]),max(sp_point[,1]),max(sp_point[,1]),min(sp_point[,1])),
+                  c(max(sp_point[,2]),max(sp_point[,2]),min(sp_point[,2]),min(sp_point[,2])))
+plot(poly, type="l")
+
+## Select bandwidth by minimizing MSE
+
+mserw <- mse2d(sp_point, poly=poly, nsmse=100, range=.1)
+bw <- mserw$h[which.min(mserw$mse)] ## Bandwidth=.01
+
+par(mar=c(4,4,0.5,0.5))
+plot(x=mserw$h, y=mserw$mse, xlab="Bandwidth", ylab="MSE", type="l")
+i<-which.min(mserw$mse)
+points(mserw$h[i], mserw$mse[i])
+bw
+dev.off()
+
+## Estimate Kernel Density
+
+sp_points <- SpatialPoints(coords=sp_point, proj4string=CRS("+proj=utm +zone=17 +datum=WGS84"))
+
+grd <- Sobj_SpatialGrid(sp_points,maxDim=100)$SG
+grd <- GridTopology(summary(grd)$grid[,1],cellsize=summary(grd)$grid[,2],cells.dim=summary(grd)$grid[,3])
+
+kernel1 <- spkernel2d(sp_point, poly=poly, h0=bw, grd=grd)
+kernel2 <- spkernel2d(sp_point, poly=poly, h0=.005, grd=grd)
+kernel3 <- spkernel2d(sp_point, poly=poly, h0=.012, grd=grd)
+kernel4 <- spkernel2d(sp_point, poly=poly, h0=.015, grd=grd)
+
+df <- data.frame(kernel1=kernel1,kernel2=kernel2,kernel3=kernel3,kernel4=kernel4)
+SG <- SpatialGridDataFrame(grd, data=df)
+
+
+## Plot Kernel Maps
+
+ker.palette <- colorRampPalette(c("white", "orange","red","darkred","brown"), space = "rgb")
+
+spplot(SG,col.regions=ker.palette(100),names.attr=c(paste("Bandwidth = ",bw, sep="", collapse="")
+,"Bandwidth = 0.005", "Bandwidth = 0.009","Bandwidth = 0.015"),
+main="Collisions in New York City 2016 (Kernel Density)")
+
